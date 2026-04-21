@@ -170,14 +170,13 @@ Example:
 ```bash
 OPENAI_API_KEY=your_key_here
 GEMINI_API_KEY=your_key_here
-DEFAULT_GEMINI_MODEL=gemini-2.5-flash
 CLAUDE_API_KEY=your_key_here
 ```
 
 The frontend does not send provider API keys from the browser. Requests go through the backend.
 
-The Gemini model name shown in the UI is only a default. Users can still type a different valid
-Gemini model name in the `Model name` field when asking a question.
+Default model names can be changed in `backend/.env`, and users can still type a different valid
+model name in the `Model name` field when asking a question.
 
 ### Embedding endpoints
 
