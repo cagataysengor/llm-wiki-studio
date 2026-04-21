@@ -289,8 +289,9 @@ export function AskClient({ settings }: AskClientProps) {
             <div className="list-item">
               <strong>Live local run</strong>
               <p className="muted">
-                The request is in progress. With local models, 30-90 seconds can be normal depending
-                on CPU speed, context size, and model quantization.
+                The request is in progress. Response time depends on your hardware, model size,
+                context length, and quantization settings. GPU-backed local setups are usually
+                much faster than CPU-only runs.
               </p>
             </div>
           ) : null}
