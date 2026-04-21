@@ -1,0 +1,48 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17-bookworm
+    container_name: llm-wiki-db
+    environment:
+      POSTGRES_DB: llm_wiki
+      POSTGRES_USER: llm_wiki
+      POSTGRES_PASSWORD: llm_wiki
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U llm_wiki -d llm_wiki"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: llm-wiki-backend
+    environment:
+      APP_NAME: LLM Wiki API
+      DATABASE_URL: postgresql+psycopg://llm_wiki:llm_wiki@db:5432/llm_wiki
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: llm-wiki-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+
