@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 
 import { api } from "@/lib/api";
-import { DocumentItem } from "@/lib/types";
+import { DocumentItem, IngestResponse } from "@/lib/types";
 
 type DocumentsClientProps = {
   initialDocuments: DocumentItem[];
@@ -14,6 +15,7 @@ export function DocumentsClient({ initialDocuments }: DocumentsClientProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [lastIngestResult, setLastIngestResult] = useState<IngestResponse | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleUpload() {
@@ -32,6 +34,7 @@ export function DocumentsClient({ initialDocuments }: DocumentsClientProps) {
           const result = await api.ingestDocument(selectedFile);
           const refreshed = await api.getDocuments();
           setDocuments(refreshed);
+          setLastIngestResult(result);
           setMessage(
             `${result.filename} indexed successfully with ${result.chunk_count} chunks.`
           );
@@ -70,6 +73,26 @@ export function DocumentsClient({ initialDocuments }: DocumentsClientProps) {
             {isPending ? "Indexing..." : "Upload and index"}
           </button>
           {message ? <p className="notice success">{message}</p> : null}
+          {lastIngestResult?.wiki_page_slug ? (
+            <div className="notice info">
+              Source summary created:{" "}
+              <Link href={`/wiki/${lastIngestResult.wiki_page_slug}`}>
+                {lastIngestResult.wiki_page_title ?? lastIngestResult.wiki_page_slug}
+              </Link>
+            </div>
+          ) : null}
+          {lastIngestResult && lastIngestResult.topic_page_slugs.length > 0 ? (
+            <div className="list-item">
+              <strong>Related topic pages</strong>
+              <div className="pill-row">
+                {lastIngestResult.topic_page_slugs.map((slug) => (
+                  <Link className="pill" href={`/wiki/${slug}`} key={slug}>
+                    {slug}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {error ? <p className="notice error">{error}</p> : null}
         </div>
       </section>

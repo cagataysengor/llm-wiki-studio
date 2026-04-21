@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     default_openai_url: str = "https://api.openai.com/v1/chat/completions"
     default_openai_model: str = "gpt-4.1-mini"
     default_gemini_url: str = "https://generativelanguage.googleapis.com/v1beta/models"
-    default_gemini_model: str = "gemini-2.0-flash"
+    default_gemini_model: str = "gemini-2.5-flash"
     default_claude_url: str = "https://api.anthropic.com/v1/messages"
     default_claude_model: str = "claude-3-5-sonnet-latest"
 

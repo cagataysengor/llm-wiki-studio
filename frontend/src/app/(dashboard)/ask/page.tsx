@@ -8,10 +8,10 @@ export default async function AskPage() {
     <>
       <section className="page-heading">
         <div>
-          <span className="eyebrow">Ask AI</span>
-          <h2>Question-answer workflow</h2>
+          <span className="eyebrow">Wiki-first QA</span>
+          <h2>Ask questions against the knowledge layer</h2>
         </div>
-        <p>Ask the backend directly, inspect sources, then save the answer into the wiki.</p>
+        <p>Query the wiki, inspect the supporting evidence, then save useful answers back into the workspace.</p>
       </section>
       <AskClient settings={settings} />
     </>

@@ -8,6 +8,7 @@ from app.core.config import get_settings
 from app.services.embeddings import embed_texts
 from app.services.repositories import replace_document_chunks, upsert_document
 from app.services.text import chunk_text, detect_ext, extract_text, make_doc_id, normalize_text
+from app.services.wiki import create_or_update_source_summary_page
 
 
 settings = get_settings()
@@ -48,11 +49,22 @@ def ingest_upload(db: Session, upload: UploadFile) -> dict[str, Any]:
         chunks=chunks,
         embeddings=embeddings,
     )
+    summary_page = create_or_update_source_summary_page(
+        db,
+        doc_id=doc_id,
+        filename=upload.filename or target_path.name,
+        filetype=detect_ext(upload.filename or target_path.name),
+        text=text,
+        chunk_count=len(chunks),
+    )
     return {
         "document_id": doc_id,
         "filename": upload.filename or target_path.name,
         "chunk_count": len(chunks),
         "text_length": len(text),
+        "wiki_page_slug": summary_page["slug"],
+        "wiki_page_title": summary_page["title"],
+        "topic_page_slugs": [item["slug"] for item in summary_page.get("topic_pages", [])],
     }
 
 

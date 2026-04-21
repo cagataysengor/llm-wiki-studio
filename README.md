@@ -1,36 +1,44 @@
 # LLM Wiki Studio
 
-LLM Wiki Studio is a productized RAG application that turns uploaded documents and code files into a searchable wiki plus an AI Q&A workspace.
+LLM Wiki Studio is a wiki-first knowledge workspace that turns uploaded documents and code files into a persistent, queryable knowledge layer.
 
 ## Why This Project Exists
 
-Many "chat with your docs" tools are good at answering a few questions, but they often feel fragile, hard to extend, and not very product-like.
+Many "chat with your docs" tools are useful for one-off questions, but they often re-discover the same context from scratch every time. The result is helpful in the moment, but it does not accumulate into a durable knowledge asset.
 
-This project focuses on building a usable document intelligence application:
+This project takes a different approach. Instead of treating uploads as raw files to retrieve from forever, it compiles them into a growing wiki layer that can be queried, extended, and maintained over time.
 
-- upload source material and index it through a backend API
-- retrieve grounded context from multiple files
-- ask questions with local or hosted language models
-- save useful answers back into a growing wiki
-- present the whole flow in a frontend that feels like a real product instead of a notebook or utility script
+The workflow is designed around a simple idea:
+
+- ingest source material through a backend API
+- generate source summary pages and topic pages automatically
+- maintain `index.md` and `log.md` as system wiki pages
+- answer questions using wiki pages first and raw sources second
+- save useful answers back into the wiki as durable notes
+- surface wiki health issues so the knowledge base can be maintained, not just queried
 
 ## What Makes It Useful
 
 - Works with local models for private, low-cost experiments
 - Also supports hosted providers like Gemini and OpenAI-style endpoints
 - Handles mixed source types such as Markdown, PDF, DOCX, and code files
-- Keeps a wiki output layer so answers can become reusable project knowledge
+- Builds a persistent wiki layer instead of relying only on raw-file retrieval
+- Generates source summaries, topic pages, saved answers, and system wiki pages
+- Keeps an explicit maintenance loop with index, log, and lint reporting
 - Uses query-aware retrieval so technical questions prefer code/config context while narrative questions prefer document-like sources
 
 ## Current Features
 
 Available capabilities:
 
-- Upload and index documents
-- View indexed sources
-- Ask grounded questions over indexed content
+- Upload and index source files
+- Generate source summary pages during ingest
+- Generate and update topic pages linked across related sources
+- Maintain system pages such as `index.md` and `log.md`
+- Ask wiki-first grounded questions over the knowledge layer
 - Save answers into wiki pages
-- Browse saved wiki entries
+- Browse, review, and delete non-system wiki entries
+- Run wiki health checks with lint-style findings
 - Use `Local`, `Gemini`, `OpenAI`, and `Claude` provider modes
 - Run locally with SQLite, or use Docker Compose with PostgreSQL + `pgvector`
 
@@ -39,8 +47,33 @@ Available capabilities:
 - Backend: FastAPI, Pydantic, SQLAlchemy
 - Frontend: Next.js App Router, TypeScript, React Query
 - Storage: SQLite by default, PostgreSQL + `pgvector` via Docker Compose
-- Retrieval: database-backed chunk search with intent-aware reranking
+- Retrieval: wiki-first question answering plus database-backed chunk retrieval with intent-aware reranking
+- Wiki layer: source summaries, topic pages, saved answers, `index.md`, `log.md`, and lint reporting
 - Local inference: OpenAI-compatible local endpoints such as `llama.cpp`
+
+## Core Workflow
+
+### 1. Ingest
+
+When a file is uploaded, the system stores the raw source, extracts text, chunks it for retrieval, and generates wiki artifacts.
+
+Typical ingest outputs:
+
+- a source summary page for the uploaded file
+- one or more topic pages derived from the content
+- updated `index.md` and `log.md` entries
+
+### 2. Ask
+
+Questions are answered against the wiki first, then refined with raw source chunks when needed. This keeps answers grounded while still benefiting from the synthesized knowledge already stored in the workspace.
+
+### 3. Save
+
+Useful answers can be saved back into the wiki as durable pages so they do not disappear into chat history.
+
+### 4. Maintain
+
+The wiki can be health-checked for issues such as orphan pages, thin topic coverage, and missing topic links. This makes the system feel more like a maintained knowledge base than a temporary QA interface.
 
 ## Project Structure
 
@@ -137,10 +170,14 @@ Example:
 ```bash
 OPENAI_API_KEY=your_key_here
 GEMINI_API_KEY=your_key_here
+DEFAULT_GEMINI_MODEL=gemini-2.5-flash
 CLAUDE_API_KEY=your_key_here
 ```
 
 The frontend does not send provider API keys from the browser. Requests go through the backend.
+
+The Gemini model name shown in the UI is only a default. Users can still type a different valid
+Gemini model name in the `Model name` field when asking a question.
 
 ### Embedding endpoints
 
@@ -202,6 +239,7 @@ Backend smoke tests cover the highest-signal application flows:
 - ask
 - save-to-wiki
 - reindex
+- wiki maintenance endpoints
 
 Run locally:
 
@@ -228,16 +266,17 @@ Before publishing your own fork or deployment:
 
 - Local CPU inference can be slow on older machines
 - Retrieval quality is stronger on well-structured content than noisy mixed-source datasets
+- Topic synthesis is still heuristic and not yet entity-level or contradiction-aware
 - This is not yet a production-hardened multi-user platform
 - Auth, background jobs, and workspace isolation are not implemented yet
 
 ## Roadmap
 
-1. Add first-class reindex jobs when embedding models change
-2. Move long-running ingest and generation to background tasks
-3. Add auth and multi-user workspaces
-4. Improve retrieval observability and evaluation
-5. Add deployment manifests and stronger end-to-end tests
+1. Improve topic synthesis and move toward richer entity and concept pages
+2. Add stronger cross-linking, contradiction handling, and wiki maintenance workflows
+3. Move long-running ingest and generation to background tasks
+4. Add auth and multi-user workspaces
+5. Improve retrieval observability, evaluation, and deployment readiness
 
 ## Product Direction
 
@@ -246,5 +285,6 @@ This repository is intended to be shared as the professional version of the proj
 - backend logic is organized into maintainable service modules
 - frontend is a dedicated Next.js application
 - provider secrets are handled server-side
-- retrieval is structured and query-aware
+- retrieval is structured, query-aware, and wiki-first
+- the app is positioned as a knowledge workspace, not only a file-chat interface
 - the codebase is shaped for portfolio use, iteration, and open-source sharing

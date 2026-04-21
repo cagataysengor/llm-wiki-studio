@@ -7,6 +7,16 @@ export type DocumentItem = {
   text_length: number;
 };
 
+export type IngestResponse = {
+  document_id: string;
+  filename: string;
+  chunk_count: number;
+  text_length: number;
+  wiki_page_slug?: string | null;
+  wiki_page_title?: string | null;
+  topic_page_slugs: string[];
+};
+
 export type WikiPage = {
   slug: string;
   title: string;
@@ -43,6 +53,25 @@ export type SaveAnswerResponse = {
   title: string;
   filepath: string;
   action: "created" | "merged";
+};
+
+export type WikiLintFinding = {
+  severity: string;
+  category: string;
+  page_slug?: string | null;
+  page_title?: string | null;
+  message: string;
+};
+
+export type WikiLintResponse = {
+  checked_pages: number;
+  findings: WikiLintFinding[];
+};
+
+export type WikiDeleteResponse = {
+  slug: string;
+  title: string;
+  action: string;
 };
 
 export type PublicSettings = {

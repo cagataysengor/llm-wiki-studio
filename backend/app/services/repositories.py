@@ -128,6 +128,16 @@ def get_wiki_page_by_slug(db: Session, slug: str) -> dict[str, Any] | None:
     return _serialize_wiki_page(page)
 
 
+def delete_wiki_page_by_slug(db: Session, slug: str) -> dict[str, Any] | None:
+    page = db.get(WikiPage, slug)
+    if page is None:
+        return None
+    serialized = _serialize_wiki_page(page)
+    db.delete(page)
+    db.commit()
+    return serialized
+
+
 def _serialize_wiki_page(page: WikiPage) -> dict[str, Any]:
     markdown = ""
     try:

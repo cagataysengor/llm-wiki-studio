@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.document_chunk import DocumentChunk, EMBEDDING_DIMENSIONS
+from app.services.repositories import list_wiki_pages
 from app.services.embeddings import embed_text
 
 
@@ -144,6 +145,70 @@ def read_wiki_snippets(limit: int = 4) -> list[dict[str, str]]:
             }
         )
     return snippets
+
+
+def retrieve_wiki_pages(db: Session, query: str, top_k: int = 4) -> list[dict[str, Any]]:
+    if not query.strip():
+        return []
+
+    intent = _classify_query_intent(query)
+    lowered_query = query.lower()
+    query_terms = [term for term in lowered_query.split() if len(term) >= 3]
+
+    pages = [
+        page
+        for page in list_wiki_pages(db)
+        if str(page.get("slug", "")) not in {"index", "log"}
+    ]
+    scored_pages: list[dict[str, Any]] = []
+    for page in pages:
+        title = str(page.get("title", ""))
+        slug = str(page.get("slug", ""))
+        summary = str(page.get("summary", ""))
+        markdown = str(page.get("markdown", ""))
+        tags = [str(item).lower() for item in page.get("tags", [])]
+
+        score = 0.0
+        lowered_title = title.lower()
+        lowered_slug = slug.lower()
+        lowered_summary = summary.lower()
+        lowered_markdown = markdown.lower()
+
+        title_hits = sum(term in lowered_title for term in query_terms)
+        slug_hits = sum(term in lowered_slug for term in query_terms)
+        summary_hits = sum(term in lowered_summary for term in query_terms)
+        markdown_hits = sum(term in lowered_markdown for term in query_terms)
+
+        score += 0.16 * title_hits
+        score += 0.12 * slug_hits
+        score += 0.08 * summary_hits
+        score += 0.03 * markdown_hits
+
+        if "topic-page" in tags and intent == "technical":
+            score += 0.18
+        if "source-summary" in tags and intent in {"narrative", "general"}:
+            score += 0.12
+        if "qa-generated" in tags:
+            score += 0.05
+
+        if any(term in lowered_markdown for term in query_terms):
+            score += 0.08
+
+        if score <= 0:
+            continue
+
+        scored_pages.append(
+            {
+                "slug": slug,
+                "title": title,
+                "summary": summary,
+                "markdown": markdown,
+                "score": round(score, 4),
+            }
+        )
+
+    scored_pages.sort(key=lambda item: float(item["score"]), reverse=True)
+    return scored_pages[:top_k]
 
 
 def _vector_literal(vector: list[float]) -> str:

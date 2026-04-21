@@ -14,10 +14,10 @@ export default async function HomePage() {
         <div className="hero-grid">
           <div className="stack hero-copy">
             <span className="hero-badge">Knowledge Workspace</span>
-            <h2>Turn scattered documents into a living, queryable company wiki.</h2>
+            <h2>Turn raw sources into a living, queryable wiki that grows over time.</h2>
             <p className="hero-lead">
-              Upload documents, retrieve grounded context, and turn useful answers into reusable
-              knowledge with a dedicated API and frontend.
+              Uploaded sources are turned into summary pages, topic pages, and a persistent wiki
+              layer that can be queried, extended, and maintained over time.
             </p>
             <div className="pill-row">
               {settings.providers.map((provider) => (
@@ -32,18 +32,18 @@ export default async function HomePage() {
             <div>
               <h3>Workspace summary</h3>
               <p className="muted">
-                FastAPI backend, Next.js frontend, grounded retrieval, and support for both local
-                and hosted language models.
+                FastAPI backend, Next.js frontend, wiki-first retrieval, and support for both
+                local and hosted language models.
               </p>
             </div>
             <div className="hero-metrics">
               <div className="metric">
                 <strong>{documents.length}</strong>
-                <span className="muted">indexed sources already wired into the API</span>
+                <span className="muted">source files ingested into the workspace</span>
               </div>
               <div className="metric">
                 <strong>{pages.length}</strong>
-                <span className="muted">knowledge pages available to browse and extend</span>
+                <span className="muted">wiki pages generated, linked, or saved</span>
               </div>
             </div>
           </div>
@@ -53,15 +53,15 @@ export default async function HomePage() {
       <section className="showcase-strip">
         <article className="showcase-card">
           <div className="micro-label">Overview</div>
-          <strong>Search documents, ask questions, and build a reusable wiki</strong>
+          <strong>Build a persistent knowledge layer between raw files and AI answers</strong>
           <p className="muted">
-            The application is structured around ingestion, retrieval, question answering, and
-            knowledge capture.
+            The system ingests raw sources, generates wiki pages, tracks activity, and answers
+            questions against an evolving wiki-first knowledge base.
           </p>
         </article>
         <article className="showcase-card highlight">
           <div className="eyebrow">Core Flow</div>
-          <strong>Ingest documents, ask grounded questions, and save answers into the wiki</strong>
+          <strong>Ingest sources, generate knowledge pages, ask questions, and maintain the wiki</strong>
         </article>
       </section>
 
@@ -69,17 +69,17 @@ export default async function HomePage() {
         <StatCard
           label="Indexed documents"
           value={String(documents.length)}
-          description="Files already ingested into the backend workspace."
+          description="Raw sources available to feed and expand the wiki."
         />
         <StatCard
           label="Wiki pages"
           value={String(pages.length)}
-          description="Persisted markdown pages available for browsing and editing."
+          description="Generated summaries, topic pages, saved answers, and system pages."
         />
         <StatCard
           label="Default provider"
           value={settings.default_provider}
-          description="Public backend defaults exposed to the frontend."
+          description="Default model provider currently exposed to the workspace."
         />
       </section>
 
@@ -88,10 +88,10 @@ export default async function HomePage() {
           <div className="micro-label">Current Features</div>
           <h3>Available now</h3>
           <div className="list">
-            <div className="list-item">Document ingest API and local raw storage</div>
-            <div className="list-item">Wiki page persistence and listing</div>
-            <div className="list-item">Question answering route with retrieved context</div>
-            <div className="list-item">Provider abstraction for local and hosted LLMs</div>
+            <div className="list-item">Automatic source summary generation during ingest</div>
+            <div className="list-item">Topic page creation and wiki page linking</div>
+            <div className="list-item">Wiki-first question answering with raw source support</div>
+            <div className="list-item">Automatic index, log, and wiki health reporting</div>
           </div>
         </article>
 
@@ -99,36 +99,37 @@ export default async function HomePage() {
           <div className="micro-label">Planned Improvements</div>
           <h3>Next steps</h3>
           <div className="list">
+            <div className="list-item">Stronger topic synthesis and entity-level page updates</div>
+            <div className="list-item">Safer source deletion and graph-aware cleanup workflows</div>
             <div className="list-item">Authentication and team workspaces</div>
-            <div className="list-item">Postgres + pgvector retrieval pipeline</div>
-            <div className="list-item">Async background jobs for indexing and generation</div>
-            <div className="list-item">Observability, tests, CI, and deployment templates</div>
+            <div className="list-item">Async jobs, observability, and richer evaluation flows</div>
           </div>
         </article>
       </section>
 
       <section className="feature-band">
         <article className="feature-card">
-          <div className="micro-label">Architecture</div>
-          <strong>Separated backend and frontend</strong>
+          <div className="micro-label">Wiki Layer</div>
+          <strong>Sources become durable knowledge pages</strong>
           <p className="muted">
-            The application uses a dedicated API layer and a separate frontend for a cleaner
-            product structure.
+            New files are compiled into summaries and topic pages instead of staying as isolated
+            raw documents.
           </p>
         </article>
         <article className="feature-card">
-          <div className="micro-label">Security</div>
-          <strong>Server-side provider configuration</strong>
+          <div className="micro-label">Retrieval</div>
+          <strong>Wiki-first answers with source support</strong>
           <p className="muted">
-            Secrets stay server-side while the frontend consumes a cleaner and safer API surface.
+            The system prefers synthesized wiki knowledge first and falls back to raw chunks for
+            detail and grounding.
           </p>
         </article>
         <article className="feature-card">
-          <div className="micro-label">Knowledge</div>
-          <strong>Answers can be saved into the wiki</strong>
+          <div className="micro-label">Maintenance</div>
+          <strong>Index, log, lint, and cleanup workflows</strong>
           <p className="muted">
-            Useful responses can be turned into durable knowledge pages instead of staying as
-            one-off chat outputs.
+            The wiki keeps its own catalog, activity history, health report, and manual cleanup
+            controls.
           </p>
         </article>
       </section>

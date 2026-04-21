@@ -12,6 +12,7 @@ node_modules/
 dist/
 build/
 .archive/
+backups/
 data/app.db
 data/metadata.db
 data/index/

@@ -23,3 +23,21 @@ class WikiCreateRequest(BaseModel):
     title: str
     markdown: str
 
+
+class WikiLintFinding(BaseModel):
+    severity: str
+    category: str
+    page_slug: str | None = None
+    page_title: str | None = None
+    message: str
+
+
+class WikiLintResponse(BaseModel):
+    checked_pages: int
+    findings: list[WikiLintFinding]
+
+
+class WikiDeleteResponse(BaseModel):
+    slug: str
+    title: str
+    action: str

@@ -297,13 +297,6 @@ def _clean_local_completion_text(text: str) -> str:
         if splitter in compact:
             compact = compact.split(splitter, 1)[0].strip()
 
-    sentence_endings = [index for index, char in enumerate(compact) if char in ".!?"]
-    if sentence_endings:
-        compact = compact[: sentence_endings[0] + 1].strip()
-
-    if len(compact) > 180:
-        compact = compact[:180].rsplit(" ", 1)[0].strip()
-
     return compact
 
 

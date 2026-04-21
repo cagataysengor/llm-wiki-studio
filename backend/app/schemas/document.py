@@ -19,6 +19,9 @@ class IngestResponse(BaseModel):
     filename: str
     chunk_count: int
     text_length: int
+    wiki_page_slug: str | None = None
+    wiki_page_title: str | None = None
+    topic_page_slugs: list[str] = []
 
 
 class ReindexRequest(BaseModel):

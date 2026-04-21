@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.schemas.wiki import WikiCreateRequest, WikiPageDetail, WikiPageListItem
+from app.schemas.wiki import WikiCreateRequest, WikiDeleteResponse, WikiLintResponse, WikiPageDetail, WikiPageListItem
 from app.services.repositories import get_wiki_page_by_slug, list_wiki_pages
-from app.services.wiki import create_manual_wiki_page
+from app.services.wiki import create_manual_wiki_page, delete_wiki_page, lint_wiki
 
 
 router = APIRouter(prefix="/wiki", tags=["wiki"])
@@ -28,3 +28,17 @@ def create_page(payload: WikiCreateRequest, db: Session = Depends(get_db)) -> Wi
     page = create_manual_wiki_page(db=db, title=payload.title, markdown=payload.markdown)
     return WikiPageDetail.model_validate(page)
 
+
+@router.delete("/{slug}", response_model=WikiDeleteResponse)
+def remove_page(slug: str, db: Session = Depends(get_db)) -> WikiDeleteResponse:
+    try:
+        result = delete_wiki_page(db=db, slug=slug)
+        return WikiDeleteResponse.model_validate(result)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/lint/report", response_model=WikiLintResponse)
+def get_wiki_lint_report(db: Session = Depends(get_db)) -> WikiLintResponse:
+    report = lint_wiki(db)
+    return WikiLintResponse.model_validate(report)

@@ -1,9 +1,13 @@
 import Link from "next/link";
 
 import { api } from "@/lib/api";
+import { WikiListClient } from "@/components/wiki-list-client";
 
 export default async function WikiPageList() {
-  const pages = await api.getWikiPages().catch(() => []);
+  const [pages, lintReport] = await Promise.all([
+    api.getWikiPages().catch(() => []),
+    api.getWikiLintReport().catch(() => null),
+  ]);
 
   return (
     <>
@@ -15,29 +19,31 @@ export default async function WikiPageList() {
         <p>Persisted markdown now has a dedicated browsing surface.</p>
       </section>
 
-      <section className="panel">
-        <h3>Saved pages</h3>
-        <div className="list">
-          {pages.length === 0 ? (
-            <div className="list-item">No wiki pages available yet.</div>
-          ) : (
-            pages.map((page) => (
-              <Link className="list-item" href={`/wiki/${page.slug}`} key={page.slug}>
-                <strong>{page.title}</strong>
-                <p className="muted">{page.summary || "No summary yet."}</p>
-                <div className="pill-row">
-                  {page.tags.map((tag) => (
-                    <span className="pill" key={tag}>
-                      {tag}
-                    </span>
-                  ))}
+      {lintReport ? (
+        <section className="panel">
+          <h3>Wiki health</h3>
+          <div className="stack">
+            <p className="muted">
+              Checked {lintReport.checked_pages} page{lintReport.checked_pages === 1 ? "" : "s"}.
+            </p>
+            <div className="list">
+              {lintReport.findings.map((finding, index) => (
+                <div className="list-item" key={`${finding.category}-${finding.page_slug ?? "global"}-${index}`}>
+                  <strong>
+                    {finding.category} · {finding.severity}
+                  </strong>
+                  <p className="muted">{finding.message}</p>
+                  {finding.page_slug ? (
+                    <Link href={`/wiki/${finding.page_slug}`}>{finding.page_title ?? finding.page_slug}</Link>
+                  ) : null}
                 </div>
-              </Link>
-            ))
-          )}
-        </div>
-      </section>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <WikiListClient initialPages={pages} />
     </>
   );
 }
-

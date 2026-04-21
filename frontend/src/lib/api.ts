@@ -2,10 +2,13 @@ import {
   AskQuestionPayload,
   AskResponse,
   DocumentItem,
+  IngestResponse,
   LocalServerStatus,
   PublicSettings,
   SaveAnswerResponse,
+  WikiDeleteResponse,
   WikiPage,
+  WikiLintResponse,
 } from "@/lib/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
@@ -71,15 +74,15 @@ export const api = {
   getDocuments: () => request<DocumentItem[]>("/documents"),
   getWikiPages: () => request<WikiPage[]>("/wiki"),
   getWikiPage: (slug: string) => request<WikiPage>(`/wiki/${slug}`),
+  getWikiLintReport: () => request<WikiLintResponse>("/wiki/lint/report"),
+  deleteWikiPage: (slug: string) =>
+    request<WikiDeleteResponse>(`/wiki/${slug}`, {
+      method: "DELETE",
+    }),
   ingestDocument: (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    return request<{
-      document_id: string;
-      filename: string;
-      chunk_count: number;
-      text_length: number;
-    }>("/documents/ingest", {
+    return request<IngestResponse>("/documents/ingest", {
       method: "POST",
       body: formData,
     });
