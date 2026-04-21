@@ -123,28 +123,45 @@ Note:
 
 ## Provider Setup
 
-### Gemini
+The application supports these provider modes in the UI:
 
-Set the backend key in `backend/.env`:
+- `Local`
+- `OpenAI`
+- `Gemini`
+- `Claude`
+
+Hosted providers are configured through `backend/.env`.
+
+Example:
 
 ```bash
+OPENAI_API_KEY=your_key_here
 GEMINI_API_KEY=your_key_here
+CLAUDE_API_KEY=your_key_here
 ```
 
 The frontend does not send provider API keys from the browser. Requests go through the backend.
 
-### OpenAI-style embeddings
+### Embedding endpoints
 
-To use a remote embedding service:
+The default local setup can use a local embedding endpoint.
 
 ```bash
-EMBEDDING_PROVIDER=OpenAI
+EMBEDDING_PROVIDER=Local
+EMBEDDING_MODE=auto
+EMBEDDING_URL=http://127.0.0.1:8080/v1/embeddings
+```
+
+You can also use a remote or hosted embedding endpoint:
+
+```bash
+EMBEDDING_PROVIDER=Remote
 EMBEDDING_MODE=remote
-EMBEDDING_URL=https://api.openai.com/v1/embeddings
+EMBEDDING_URL=https://your-embedding-endpoint/v1/embeddings
 EMBEDDING_API_KEY=your_key_here
 ```
 
-For local OpenAI-compatible embedding servers, point `EMBEDDING_URL` to your local `/v1/embeddings` endpoint.
+Any OpenAI-compatible embedding endpoint can be used, including local or hosted services. OpenAI is only one possible provider, not a requirement.
 
 ## Docker Compose
 
