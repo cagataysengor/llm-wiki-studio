@@ -2,6 +2,8 @@
 
 LLM Wiki Studio is a wiki-first knowledge workspace that turns uploaded documents and code files into a persistent, queryable knowledge layer.
 
+![LLM Wiki Studio Overview](docs/images/overview.png)
+
 ## Why This Project Exists
 
 Many "chat with your docs" tools are useful for one-off questions, but they often re-discover the same context from scratch every time. The result is helpful in the moment, but it does not accumulate into a durable knowledge asset.
@@ -74,6 +76,16 @@ Useful answers can be saved back into the wiki as durable pages so they do not d
 ### 4. Maintain
 
 The wiki can be health-checked for issues such as orphan pages, thin topic coverage, and missing topic links. This makes the system feel more like a maintained knowledge base than a temporary QA interface.
+
+## Screenshots
+
+### Ask
+
+![Ask AI](docs/images/ask-ai.png)
+
+### Wiki
+
+![Wiki](docs/images/wiki.png)
 
 ## Project Structure
 

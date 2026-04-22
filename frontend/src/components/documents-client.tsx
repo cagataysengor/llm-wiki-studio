@@ -109,7 +109,6 @@ export function DocumentsClient({ initialDocuments }: DocumentsClientProps) {
                 <p className="muted">
                   {document.filetype ?? "unknown"} · {document.text_length} chars
                 </p>
-                <code>{document.filepath}</code>
               </div>
             ))
           )}
