@@ -11,7 +11,7 @@ from app.services.qa import answer_question, save_answer_to_wiki
 from app.services.reindex import reindex_documents
 from app.services.retrieval import retrieve_wiki_pages
 from app.services.repositories import get_wiki_page_by_slug, list_documents
-from app.services.wiki import lint_wiki
+from app.services.wiki import lint_wiki, update_manual_wiki_page
 
 
 def test_healthcheck() -> None:
@@ -82,6 +82,30 @@ def test_ingest_ask_and_reindex_flow() -> None:
         assert "Provider `Disabled` adapter" in qa_payload["answer"]
         assert "ask | What is anomaly detection used for?" in log_path.read_text(encoding="utf-8")
 
+        agentic_payload = answer_question(
+            db=db,
+            question="What is anomaly detection used for?",
+            provider="Disabled",
+            model_name="test-model",
+            api_key="",
+            llm_url="http://unused.local",
+            embed_model="test-embed-model",
+            top_k=3,
+            agentic_mode=True,
+        )
+        assert agentic_payload["agentic"] is not None
+        agentic_report = agentic_payload["agentic"]
+        assert isinstance(agentic_report, dict)
+        assert agentic_report["enabled"] is True
+        assert agentic_report["wiki_coverage"] in {"strong", "partial", "weak", "missing"}
+        assert "raw_retrieval_avoided" in agentic_report["token_estimate"]
+        assert len(agentic_report["suggested_updates"]) >= 1
+        actionable_suggestions = [
+            item for item in agentic_report["suggested_updates"] if item["action"] in {"create", "update"}
+        ]
+        for suggestion in actionable_suggestions:
+            assert suggestion["markdown"].startswith("#") or "## Agentic Update Proposal" in suggestion["markdown"]
+
         save_payload = save_answer_to_wiki(
             db=db,
             title="Anomaly Detection Note",
@@ -96,6 +120,16 @@ def test_ingest_ask_and_reindex_flow() -> None:
         assert refreshed_index_page is not None
         assert "[[anomaly-detection-note]]" in refreshed_index_page["markdown"]
         assert "save | Anomaly Detection Note" in log_path.read_text(encoding="utf-8")
+
+        updated_topic = update_manual_wiki_page(
+            db=db,
+            slug="topic-anomaly-detection",
+            title="Anomaly Detection",
+            markdown=str(topic_page["markdown"]).rstrip() + "\n\n## Agentic Note\nReusable wiki update.",
+        )
+        assert "## Agentic Note" in updated_topic["markdown"]
+        assert "wiki | Anomaly Detection" in log_path.read_text(encoding="utf-8")
+
         lint_payload = lint_wiki(db)
         assert lint_payload["checked_pages"] >= 3
         assert any(item["category"] == "thin-topic" for item in lint_payload["findings"])

@@ -24,6 +24,11 @@ class WikiCreateRequest(BaseModel):
     markdown: str
 
 
+class WikiUpdateRequest(BaseModel):
+    title: str
+    markdown: str
+
+
 class WikiLintFinding(BaseModel):
     severity: str
     category: str

@@ -37,6 +37,7 @@ export type AskResponse = {
     text: string;
     score: number;
   }>;
+  agentic?: AgenticWikiReport | null;
 };
 
 export type AskQuestionPayload = {
@@ -46,6 +47,43 @@ export type AskQuestionPayload = {
   llm_url: string;
   embed_model: string;
   top_k: number;
+  agentic_mode: boolean;
+};
+
+export type AgenticWikiReport = {
+  enabled: boolean;
+  wiki_sufficiency_score: number;
+  wiki_coverage: "strong" | "partial" | "weak" | "missing" | string;
+  wiki_confidence: "high" | "medium" | "low" | string;
+  query_intent: string;
+  sufficiency_factors: Array<{
+    name: string;
+    score: number;
+    reason: string;
+  }>;
+  used_raw_sources: boolean;
+  why_raw_retrieval_needed: string;
+  wiki_pages: Array<{
+    slug: string;
+    title: string;
+    score: number;
+  }>;
+  matched_wiki_terms: string[];
+  matched_source_terms: string[];
+  suggested_updates: Array<{
+    kind: string;
+    action: "create" | "update" | "none" | string;
+    target_slug: string;
+    title: string;
+    reason: string;
+    markdown: string;
+  }>;
+  agent_steps: string[];
+  token_estimate: {
+    context_tokens: number;
+    answer_tokens: number;
+    raw_retrieval_avoided: boolean;
+  };
 };
 
 export type SaveAnswerResponse = {
@@ -90,8 +128,12 @@ export type PublicSettings = {
 
 export type LocalServerStatus = {
   reachable: boolean;
+  auth_ok: boolean;
   url: string;
   model_count: number;
   models: string[];
+  selected_model?: string;
+  model_available?: boolean | null;
+  diagnostics?: string[];
   detail?: string;
 };

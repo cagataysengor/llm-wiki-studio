@@ -91,6 +91,45 @@ def create_manual_wiki_page(db: Session, *, title: str, markdown: str) -> dict[s
     }
 
 
+def update_manual_wiki_page(db: Session, *, slug: str, title: str, markdown: str) -> dict[str, object]:
+    if slug in {"index", "log"}:
+        raise RuntimeError("System wiki pages cannot be manually updated.")
+
+    existing = get_wiki_page_by_slug(db, slug)
+    if existing is None:
+        raise RuntimeError("Wiki page not found.")
+
+    path = settings.wiki_dir / f"{slug}.md"
+    path.write_text(markdown, encoding="utf-8")
+    tags = list(existing.get("tags", []))
+    source_doc_ids = list(existing.get("source_doc_ids", []))
+    record = upsert_wiki_page(
+        db,
+        slug=slug,
+        title=title.strip(),
+        filepath=str(path),
+        summary=str(existing.get("summary", "") or "Manual wiki page"),
+        tags=tags,
+        source_doc_ids=source_doc_ids,
+    )
+    rebuild_wiki_index(db)
+    append_wiki_log(
+        event_type="wiki",
+        title=title.strip(),
+        details={"action": "manual-update", "page": slug},
+    )
+    return {
+        "slug": record.slug,
+        "title": record.title,
+        "filepath": record.filepath,
+        "summary": record.summary or "",
+        "tags": tags,
+        "source_doc_ids": source_doc_ids,
+        "updated_at": record.updated_at,
+        "markdown": markdown,
+    }
+
+
 def lint_wiki(db: Session) -> dict[str, object]:
     pages = [
         page
