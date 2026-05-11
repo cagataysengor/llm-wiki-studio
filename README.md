@@ -16,16 +16,18 @@ The workflow is designed around a simple idea:
 - generate source summary pages and topic pages automatically
 - maintain `index.md` and `log.md` as system wiki pages
 - answer questions using wiki pages first and raw sources second
+- use Agentic Wiki Mode to decide when the wiki is sufficient and when raw retrieval is needed
 - save useful answers back into the wiki as durable notes
 - surface wiki health issues so the knowledge base can be maintained, not just queried
 
 ## What Makes It Useful
 
 - Works with local models for private, low-cost experiments
-- Also supports hosted providers like Gemini and OpenAI-style endpoints
+- Also supports hosted providers like Gemini and OpenAI-compatible endpoints
 - Handles mixed source types such as Markdown, PDF, DOCX, and code files
 - Builds a persistent wiki layer instead of relying only on raw-file retrieval
 - Generates source summaries, topic pages, saved answers, and system wiki pages
+- Adds an Agentic Wiki Mode that can skip raw source retrieval when the wiki memory is enough
 - Keeps an explicit maintenance loop with index, log, and lint reporting
 - Uses query-aware retrieval so technical questions prefer code/config context while narrative questions prefer document-like sources
 
@@ -38,10 +40,15 @@ Available capabilities:
 - Generate and update topic pages linked across related sources
 - Maintain system pages such as `index.md` and `log.md`
 - Ask wiki-first grounded questions over the knowledge layer
+- Switch between Standard answering and Agentic Wiki Mode
+- Inspect why Agentic Wiki Mode used wiki-only context or fell back to raw sources
+- Generate compact wiki update suggestions after agentic answers
 - Save answers into wiki pages
+- Edit non-system wiki pages from the API
 - Browse, review, and delete non-system wiki entries
 - Run wiki health checks with lint-style findings
 - Use `Local`, `Gemini`, `OpenAI`, and `Claude` provider modes
+- Use local or hosted OpenAI-compatible endpoints, including `llama.cpp`, Ollama, and Ollama Cloud
 - Run locally with SQLite, or use Docker Compose with PostgreSQL + `pgvector`
 
 ## Architecture
@@ -49,9 +56,9 @@ Available capabilities:
 - Backend: FastAPI, Pydantic, SQLAlchemy
 - Frontend: Next.js App Router, TypeScript, React Query
 - Storage: SQLite by default, PostgreSQL + `pgvector` via Docker Compose
-- Retrieval: wiki-first question answering plus database-backed chunk retrieval with intent-aware reranking
+- Retrieval: wiki-first question answering, agentic wiki sufficiency checks, and database-backed chunk retrieval with intent-aware reranking
 - Wiki layer: source summaries, topic pages, saved answers, `index.md`, `log.md`, and lint reporting
-- Local inference: OpenAI-compatible local endpoints such as `llama.cpp`
+- Local inference: OpenAI-compatible local endpoints such as `llama.cpp`, Ollama, and Ollama Cloud
 
 ## Core Workflow
 
@@ -68,6 +75,8 @@ Typical ingest outputs:
 ### 2. Ask
 
 Questions are answered against the wiki first, then refined with raw source chunks when needed. This keeps answers grounded while still benefiting from the synthesized knowledge already stored in the workspace.
+
+In Agentic Wiki Mode, the app evaluates whether the wiki memory is enough for the question. If it is, raw source retrieval is skipped to reduce context cost. If the wiki looks incomplete, the app falls back to raw source chunks and explains the context path it used.
 
 ### 3. Save
 
@@ -165,6 +174,7 @@ Note:
 
 - CPU mode works, but will be slower.
 - Users with GPU-enabled `llama.cpp` builds can use the same app with much faster inference.
+- Ollama and Ollama Cloud can also be used through the `Local` provider when configured with an OpenAI-compatible base URL and model name.
 
 ## Provider Setup
 
@@ -183,6 +193,9 @@ Example:
 OPENAI_API_KEY=your_key_here
 GEMINI_API_KEY=your_key_here
 CLAUDE_API_KEY=your_key_here
+LOCAL_LLM_BASE_URL=http://127.0.0.1:8080
+LOCAL_LLM_MODEL=your_local_model
+OLLAMA_API_KEY=your_ollama_key_if_needed
 ```
 
 The frontend does not send provider API keys from the browser. Requests go through the backend.
@@ -277,17 +290,19 @@ Before publishing your own fork or deployment:
 
 - Local CPU inference can be slow on older machines
 - Retrieval quality is stronger on well-structured content than noisy mixed-source datasets
-- Topic synthesis is still heuristic and not yet entity-level or contradiction-aware
+- Agentic wiki sufficiency is still evolving and should be evaluated on real project datasets
+- Topic synthesis is still partly heuristic and not yet entity-level or contradiction-aware
 - This is not yet a production-hardened multi-user platform
 - Auth, background jobs, and workspace isolation are not implemented yet
 
 ## Roadmap
 
-1. Improve topic synthesis and move toward richer entity and concept pages
-2. Add stronger cross-linking, contradiction handling, and wiki maintenance workflows
-3. Move long-running ingest and generation to background tasks
-4. Add auth and multi-user workspaces
-5. Improve retrieval observability, evaluation, and deployment readiness
+1. Improve Agentic Wiki Mode with stronger citation coverage, page quality scoring, and evaluation traces
+2. Improve topic synthesis and move toward richer entity and concept pages
+3. Add stronger cross-linking, contradiction handling, and wiki maintenance workflows
+4. Move long-running ingest and generation to background tasks
+5. Add auth and multi-user workspaces
+6. Improve retrieval observability, evaluation, and deployment readiness
 
 ## Product Direction
 
@@ -297,5 +312,6 @@ This repository is intended to be shared as the professional version of the proj
 - frontend is a dedicated Next.js application
 - provider secrets are handled server-side
 - retrieval is structured, query-aware, and wiki-first
+- Agentic Wiki Mode explores lower-cost, wiki-memory-first answering before raw RAG fallback
 - the app is positioned as a knowledge workspace, not only a file-chat interface
 - the codebase is shaped for portfolio use, iteration, and open-source sharing

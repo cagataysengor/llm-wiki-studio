@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     embedding_url: str = "http://127.0.0.1:8080/v1/embeddings"
     default_local_url: str = "http://127.0.0.1:8080/v1/chat/completions"
     default_local_model: str = "local-model"
+    local_llm_base_url: str = ""
+    local_llm_model: str = ""
+    ollama_api_key: str = ""
     default_openai_url: str = "https://api.openai.com/v1/chat/completions"
     default_openai_model: str = "gpt-4.1-mini"
     default_gemini_url: str = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -48,9 +51,25 @@ class Settings(BaseSettings):
     def index_dir(self) -> Path:
         return self.data_dir / self.index_dir_name
 
+    @property
+    def local_chat_url(self) -> str:
+        if not self.local_llm_base_url.strip():
+            return self.default_local_url
+
+        normalized = self.local_llm_base_url.strip().rstrip("/")
+        if normalized.endswith("/chat/completions"):
+            return normalized
+        if normalized.endswith("/v1"):
+            return f"{normalized}/chat/completions"
+        return f"{normalized}/v1/chat/completions"
+
+    @property
+    def local_model_name(self) -> str:
+        return self.local_llm_model.strip() or self.default_local_model
+
     def get_provider_api_key(self, provider: str) -> str:
         mapping = {
-            "Local": "",
+            "Local": self.ollama_api_key,
             "OpenAI": self.openai_api_key,
             "Gemini": self.gemini_api_key,
             "Claude": self.claude_api_key,

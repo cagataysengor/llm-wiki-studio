@@ -2,6 +2,8 @@ import { api } from "@/lib/api";
 
 export default async function SettingsPage() {
   const settings = await api.getSettings();
+  const localDefaults = settings.provider_defaults.Local;
+  const localStatus = await api.getLocalServerStatus(localDefaults?.url, localDefaults?.model);
 
   return (
     <>
@@ -57,6 +59,36 @@ export default async function SettingsPage() {
           <div className="list-item">
             <strong>Data directory</strong>
             <code>{settings.data_dir}</code>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel">
+        <h3>Local provider diagnostics</h3>
+        <div className="list">
+          <div className="list-item">
+            <strong>Connection</strong>
+            <div className="pill-row">
+              <span className="pill">{localStatus.reachable ? "Reachable" : "Offline"}</span>
+              <span className="pill">{localStatus.auth_ok ? "Auth ok" : "Auth failed"}</span>
+              <span className="pill">{localStatus.model_available ? "Model found" : "Model alias possible"}</span>
+            </div>
+          </div>
+          <div className="list-item">
+            <strong>Endpoint</strong>
+            <code>{localDefaults?.url}</code>
+          </div>
+          <div className="list-item">
+            <strong>Selected model</strong>
+            <p className="muted">{localStatus.selected_model ?? localDefaults?.model}</p>
+          </div>
+          <div className="list-item">
+            <strong>Provider messages</strong>
+            {(localStatus.diagnostics ?? []).map((item) => (
+              <p className="muted" key={item}>
+                {item}
+              </p>
+            ))}
           </div>
         </div>
       </section>

@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from app.services.agentic_wiki import build_agentic_report, should_use_raw_retrieval
 from app.services.llm import answer_with_provider
 from app.services.retrieval import retrieve_chunks, retrieve_wiki_pages
 from app.services.repositories import list_wiki_pages
@@ -17,11 +18,20 @@ def answer_question(
     llm_url: str,
     embed_model: str,
     top_k: int,
+    agentic_mode: bool = False,
 ) -> dict[str, object]:
     del embed_model
 
     wiki_pages = retrieve_wiki_pages(db, question, top_k=max(3, min(top_k, 4)))
-    sources = retrieve_chunks(db, question, top_k=top_k)
+    raw_retrieval_needed = True
+    wiki_sufficiency_score = 0.0
+    raw_retrieval_reason = "Normal mode retrieves raw source chunks alongside wiki pages."
+    if agentic_mode:
+        raw_retrieval_needed, wiki_sufficiency_score, raw_retrieval_reason = should_use_raw_retrieval(
+            wiki_pages=wiki_pages,
+            question=question,
+        )
+    sources = retrieve_chunks(db, question, top_k=top_k) if raw_retrieval_needed else []
     source_char_limit = 1200
     wiki_char_limit = 1400
     context_budget = 6500
@@ -44,16 +54,21 @@ def answer_question(
         system = (
             "You answer questions using the provided wiki pages first and source chunks second. "
             "Treat the wiki as the primary synthesized knowledge layer, and use raw source chunks to support or refine it. "
-            "Write a concise but complete answer in 3 short parts when possible: "
-            "1) direct answer, 2) relationship or difference, 3) one or two concrete examples. "
+            "Answer in the same language as the user's question unless the user explicitly asks for another language. "
+            "Write a concise but complete answer in 180-350 words unless the user explicitly asks for more detail. "
+            "Use at most 4 bullets or numbered points. Avoid long tables. Give at most one short example. "
+            "When useful, organize the answer into 2 or 3 short parts: "
+            "1) direct answer, 2) relationship or difference, 3) one concrete example. "
             "Do not answer with a single short sentence unless the question is trivial. "
-            "End with a short Sources section."
+            "End with a short Sources section of at most 3 items."
         )
     else:
         system = (
             "You answer questions using the provided wiki pages first and source chunks second. "
             "Treat the wiki as the primary synthesized knowledge layer, and use raw source chunks to support or refine it. "
-            "Prefer grounded answers. If context is weak, say so clearly. End with a short Sources section."
+            "Answer in the same language as the user's question unless the user explicitly asks for another language. "
+            "Prefer grounded answers in 180-350 words. Use at most 4 bullets, avoid long tables, and give at most one example. "
+            "If context is weak, say so clearly. End with a short Sources section of at most 3 items."
         )
     user = f"Question: {question}\n\nContext:\n{context}"
     answer = answer_with_provider(
@@ -73,13 +88,30 @@ def answer_question(
             "top_k": str(top_k),
             "wiki_page_count": str(len(wiki_pages)),
             "source_count": str(len(sources)),
+            "agentic_mode": str(agentic_mode),
         },
     )
-    return {
+    response: dict[str, object] = {
         "question": question,
         "answer": answer,
         "sources": sources,
     }
+    if agentic_mode:
+        response["agentic"] = build_agentic_report(
+            question=question,
+            wiki_pages=wiki_pages,
+            sources=sources,
+            wiki_sufficiency_score=wiki_sufficiency_score,
+            raw_retrieval_needed=raw_retrieval_needed,
+            raw_retrieval_reason=raw_retrieval_reason,
+            context=context,
+            answer=answer,
+            provider=provider,
+            model_name=model_name,
+            api_key=api_key,
+            llm_url=llm_url,
+        )
+    return response
 
 
 def save_answer_to_wiki(

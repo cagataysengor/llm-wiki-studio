@@ -70,7 +70,17 @@ async function extractErrorMessage(response: Response): Promise<string> {
 
 export const api = {
   getSettings: () => request<PublicSettings>("/settings/public"),
-  getLocalServerStatus: () => request<LocalServerStatus>("/settings/local-status"),
+  getLocalServerStatus: (url?: string, model?: string) => {
+    const params = new URLSearchParams();
+    if (url) {
+      params.set("url", url);
+    }
+    if (model) {
+      params.set("model", model);
+    }
+    const query = params.toString();
+    return request<LocalServerStatus>(`/settings/local-status${query ? `?${query}` : ""}`);
+  },
   getDocuments: () => request<DocumentItem[]>("/documents"),
   getWikiPages: () => request<WikiPage[]>("/wiki"),
   getWikiPage: (slug: string) => request<WikiPage>(`/wiki/${slug}`),
@@ -106,6 +116,11 @@ export const api = {
   createWikiPage: (payload: { title: string; markdown: string }) =>
     request<WikiPage>("/wiki", {
       method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateWikiPage: (slug: string, payload: { title: string; markdown: string }) =>
+    request<WikiPage>(`/wiki/${slug}`, {
+      method: "PUT",
       body: JSON.stringify(payload),
     }),
 };

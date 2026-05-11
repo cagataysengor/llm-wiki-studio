@@ -2,9 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.schemas.wiki import WikiCreateRequest, WikiDeleteResponse, WikiLintResponse, WikiPageDetail, WikiPageListItem
+from app.schemas.wiki import (
+    WikiCreateRequest,
+    WikiDeleteResponse,
+    WikiLintResponse,
+    WikiPageDetail,
+    WikiPageListItem,
+    WikiUpdateRequest,
+)
 from app.services.repositories import get_wiki_page_by_slug, list_wiki_pages
-from app.services.wiki import create_manual_wiki_page, delete_wiki_page, lint_wiki
+from app.services.wiki import create_manual_wiki_page, delete_wiki_page, lint_wiki, update_manual_wiki_page
 
 
 router = APIRouter(prefix="/wiki", tags=["wiki"])
@@ -27,6 +34,16 @@ def get_page(slug: str, db: Session = Depends(get_db)) -> WikiPageDetail:
 def create_page(payload: WikiCreateRequest, db: Session = Depends(get_db)) -> WikiPageDetail:
     page = create_manual_wiki_page(db=db, title=payload.title, markdown=payload.markdown)
     return WikiPageDetail.model_validate(page)
+
+
+@router.put("/{slug}", response_model=WikiPageDetail)
+def update_page(slug: str, payload: WikiUpdateRequest, db: Session = Depends(get_db)) -> WikiPageDetail:
+    try:
+        page = update_manual_wiki_page(db=db, slug=slug, title=payload.title, markdown=payload.markdown)
+        return WikiPageDetail.model_validate(page)
+    except RuntimeError as exc:
+        status_code = 404 if str(exc) == "Wiki page not found." else 400
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.delete("/{slug}", response_model=WikiDeleteResponse)

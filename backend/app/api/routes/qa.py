@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -13,16 +13,20 @@ router = APIRouter(prefix="/qa", tags=["qa"])
 @router.post("/ask", response_model=AskResponse)
 def ask_question(payload: AskRequest, db: Session = Depends(get_db)) -> AskResponse:
     settings = get_settings()
-    response = answer_question(
-        db=db,
-        question=payload.question,
-        provider=payload.provider,
-        model_name=payload.model_name,
-        api_key=settings.get_provider_api_key(payload.provider),
-        llm_url=payload.llm_url,
-        embed_model=payload.embed_model,
-        top_k=payload.top_k,
-    )
+    try:
+        response = answer_question(
+            db=db,
+            question=payload.question,
+            provider=payload.provider,
+            model_name=payload.model_name,
+            api_key=settings.get_provider_api_key(payload.provider),
+            llm_url=payload.llm_url,
+            embed_model=payload.embed_model,
+            top_k=payload.top_k,
+            agentic_mode=payload.agentic_mode,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     return AskResponse.model_validate(response)
 
 

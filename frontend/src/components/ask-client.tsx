@@ -10,11 +10,33 @@ import {
   LocalServerStatus,
   PublicSettings,
   SaveAnswerResponse,
+  WikiPage,
 } from "@/lib/types";
 
 type AskClientProps = {
   settings: PublicSettings;
 };
+
+const LOCAL_PRESETS = [
+  {
+    id: "llamacpp",
+    label: "llama.cpp",
+    url: "http://127.0.0.1:8080/v1/chat/completions",
+    model: "local-model",
+  },
+  {
+    id: "ollama",
+    label: "Ollama",
+    url: "http://127.0.0.1:11434/v1/chat/completions",
+    model: "gpt-oss:120b-cloud",
+  },
+  {
+    id: "ollama-cloud",
+    label: "Ollama Cloud",
+    url: "https://ollama.com/v1/chat/completions",
+    model: "gpt-oss:120b-cloud",
+  },
+];
 
 export function AskClient({ settings }: AskClientProps) {
   const initialProviderConfig =
@@ -28,16 +50,20 @@ export function AskClient({ settings }: AskClientProps) {
   const [modelName, setModelName] = useState(initialProviderConfig.model);
   const [llmUrl, setLlmUrl] = useState(initialProviderConfig.url);
   const [topK, setTopK] = useState("6");
+  const [agenticMode, setAgenticMode] = useState(false);
   const [wikiTitle, setWikiTitle] = useState("");
   const [mergeIfSimilar, setMergeIfSimilar] = useState(true);
   const [result, setResult] = useState<AskResponse | null>(null);
   const [saveResult, setSaveResult] = useState<SaveAnswerResponse | null>(null);
+  const [agenticApplyResult, setAgenticApplyResult] = useState<WikiPage | null>(null);
   const [error, setError] = useState("");
   const [saveError, setSaveError] = useState("");
+  const [agenticApplyError, setAgenticApplyError] = useState("");
   const [waitSeconds, setWaitSeconds] = useState(0);
   const [localStatus, setLocalStatus] = useState<LocalServerStatus | null>(null);
   const [localStatusError, setLocalStatusError] = useState("");
   const [isAsking, setIsAsking] = useState(false);
+  const [applyingSuggestionKey, setApplyingSuggestionKey] = useState("");
   const [, startTransition] = useTransition();
   const [isSaving, startSaveTransition] = useTransition();
   const providerConfigured = settings.provider_server_configured[provider];
@@ -61,7 +87,7 @@ export function AskClient({ settings }: AskClientProps) {
     let cancelled = false;
     const loadStatus = async () => {
       try {
-        const status = await api.getLocalServerStatus();
+        const status = await api.getLocalServerStatus(llmUrl, modelName);
         if (cancelled) {
           return;
         }
@@ -87,7 +113,7 @@ export function AskClient({ settings }: AskClientProps) {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [provider]);
+  }, [llmUrl, modelName, provider]);
 
   useEffect(() => {
     if (!isAsking) {
@@ -115,7 +141,9 @@ export function AskClient({ settings }: AskClientProps) {
 
     setError("");
     setSaveError("");
+    setAgenticApplyError("");
     setSaveResult(null);
+    setAgenticApplyResult(null);
     setResult(null);
     setWikiTitle("");
     setIsAsking(true);
@@ -129,6 +157,7 @@ export function AskClient({ settings }: AskClientProps) {
           llm_url: llmUrl,
           embed_model: settings.default_embed_model,
           top_k: Number(topK) || 6,
+          agentic_mode: agenticMode,
         };
         const response = await api.askQuestion(payload);
         startTransition(() => {
@@ -171,6 +200,35 @@ export function AskClient({ settings }: AskClientProps) {
     });
   }
 
+  async function handleApplyAgenticUpdate(suggestion: NonNullable<AskResponse["agentic"]>["suggested_updates"][number]) {
+    if (suggestion.action === "none" || !suggestion.markdown.trim()) {
+      return;
+    }
+
+    const suggestionKey = `${suggestion.action}-${suggestion.target_slug}-${suggestion.title}`;
+    setApplyingSuggestionKey(suggestionKey);
+    setAgenticApplyError("");
+    setAgenticApplyResult(null);
+
+    try {
+      const response =
+        suggestion.action === "update" && suggestion.target_slug
+          ? await api.updateWikiPage(suggestion.target_slug, {
+              title: suggestion.title,
+              markdown: suggestion.markdown,
+            })
+          : await api.createWikiPage({
+              title: suggestion.title,
+              markdown: suggestion.markdown,
+            });
+      setAgenticApplyResult(response);
+    } catch (applyError) {
+      setAgenticApplyError(applyError instanceof Error ? applyError.message : "Agentic wiki update failed.");
+    } finally {
+      setApplyingSuggestionKey("");
+    }
+  }
+
   return (
     <section className="two-col">
       <article className="panel">
@@ -184,6 +242,27 @@ export function AskClient({ settings }: AskClientProps) {
               value={question}
             />
           </label>
+
+          <div className="mode-control" role="group" aria-label="Answer mode">
+            <button
+              aria-pressed={!agenticMode}
+              className={`mode-option ${!agenticMode ? "active" : ""}`}
+              onClick={() => setAgenticMode(false)}
+              type="button"
+            >
+              <strong>Standard</strong>
+              <small>Wiki-first answer</small>
+            </button>
+            <button
+              aria-pressed={agenticMode}
+              className={`mode-option ${agenticMode ? "active" : ""}`}
+              onClick={() => setAgenticMode(true)}
+              type="button"
+            >
+              <strong>Agentic Wiki</strong>
+              <small>Checks wiki memory first</small>
+            </button>
+          </div>
 
           <label className="field">
             <span>Provider</span>
@@ -205,6 +284,24 @@ export function AskClient({ settings }: AskClientProps) {
             <span>LLM URL</span>
             <input onChange={(event) => setLlmUrl(event.target.value)} value={llmUrl} />
           </label>
+
+          {provider === "Local" ? (
+            <div className="preset-row" aria-label="Local runtime presets">
+              {LOCAL_PRESETS.map((preset) => (
+                <button
+                  className="preset-button"
+                  key={preset.id}
+                  onClick={() => {
+                    setLlmUrl(preset.url);
+                    setModelName(preset.model);
+                  }}
+                  type="button"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <div className="list-item">
             <strong>Provider secret handling</strong>
@@ -233,6 +330,12 @@ export function AskClient({ settings }: AskClientProps) {
             <input max="12" min="1" onChange={(event) => setTopK(event.target.value)} type="number" value={topK} />
           </label>
 
+          {agenticMode ? (
+            <div className="notice info">
+              Wiki memory is checked first. Raw source retrieval is used only when the wiki looks insufficient.
+            </div>
+          ) : null}
+
           {provider === "Local" ? (
             <div className="list-item">
               <strong>Local server status</strong>
@@ -246,6 +349,10 @@ export function AskClient({ settings }: AskClientProps) {
               {localStatus?.reachable ? (
                 <div className="pill-row">
                   <span className="pill">Online</span>
+                  <span className="pill">{localStatus.auth_ok ? "Auth ok" : "Auth failed"}</span>
+                  {typeof localStatus.model_available === "boolean" ? (
+                    <span className="pill">{localStatus.model_available ? "Model found" : "Model alias possible"}</span>
+                  ) : null}
                   <span className="pill">{localStatus.model_count} model(s)</span>
                   {localStatus.models.slice(0, 2).map((item) => (
                     <span className="pill" key={item}>
@@ -256,6 +363,15 @@ export function AskClient({ settings }: AskClientProps) {
               ) : null}
               {!localStatus?.reachable && localStatus?.detail ? (
                 <p className="muted">{localStatus.detail}</p>
+              ) : null}
+              {localStatus?.diagnostics?.length ? (
+                <div className="stack">
+                  {localStatus.diagnostics.slice(0, 3).map((item) => (
+                    <p className="muted" key={item}>
+                      {item}
+                    </p>
+                  ))}
+                </div>
               ) : null}
               {localStatusError ? <p className="muted">{localStatusError}</p> : null}
             </div>
@@ -281,7 +397,7 @@ export function AskClient({ settings }: AskClientProps) {
           {isAsking ? (
             <div className="notice info">
               {provider === "Local"
-                ? `Local model is thinking. This can take a while on llama.cpp servers. Elapsed: ${waitSeconds}s.`
+                ? `Local/OpenAI-compatible model is thinking. This can take a while depending on the selected endpoint. Elapsed: ${waitSeconds}s.`
                 : `Request sent successfully. Waiting for the model response. Elapsed: ${waitSeconds}s.`}
             </div>
           ) : null}
@@ -289,9 +405,8 @@ export function AskClient({ settings }: AskClientProps) {
             <div className="list-item">
               <strong>Live local run</strong>
               <p className="muted">
-                The request is in progress. Response time depends on your hardware, model size,
-                context length, and quantization settings. GPU-backed local setups are usually
-                much faster than CPU-only runs.
+                The request is in progress. Response time depends on the selected endpoint,
+                model size, context length, and provider load.
               </p>
             </div>
           ) : null}
@@ -309,6 +424,87 @@ export function AskClient({ settings }: AskClientProps) {
         {result ? (
           <div className="stack">
             <pre className="code-block">{result.answer}</pre>
+
+            {result.agentic ? (
+              <div className="agentic-panel">
+                <div className="agentic-header">
+                  <div>
+                    <strong>Agentic wiki gate</strong>
+                    <p className="muted">{result.agentic.why_raw_retrieval_needed}</p>
+                  </div>
+                  <span className="score-badge">
+                    {result.agentic.used_raw_sources ? "Wiki + raw" : "Wiki only"}
+                  </span>
+                </div>
+
+                <div className="agentic-metrics">
+                  <div>
+                    <span>Context path</span>
+                    <strong>{result.agentic.used_raw_sources ? "Wiki + raw sources" : "Wiki memory only"}</strong>
+                  </div>
+                  <div>
+                    <span>Raw sources</span>
+                    <strong>{result.agentic.used_raw_sources ? "Used" : "Skipped"}</strong>
+                  </div>
+                  <div>
+                    <span>Context tokens</span>
+                    <strong>{result.agentic.token_estimate.context_tokens}</strong>
+                  </div>
+                </div>
+
+                <div className="pill-row">
+                  <span className="pill">Confidence: {result.agentic.wiki_confidence}</span>
+                  <span className="pill">Intent: {result.agentic.query_intent}</span>
+                  {result.agentic.sufficiency_factors.slice(0, 3).map((factor) => (
+                    <span className="pill" key={factor.name}>
+                      {factor.name.replaceAll("_", " ")} · {factor.score.toFixed(2)}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="list">
+                  {result.agentic.suggested_updates.map((item) => (
+                    <div className="list-item" key={`${item.kind}-${item.title}`}>
+                      <strong>{item.title}</strong>
+                      <p className="muted">{item.kind.replaceAll("_", " ")}</p>
+                      <p>{item.reason}</p>
+                      {item.markdown ? <pre className="preview-block">{item.markdown}</pre> : null}
+                      {item.action !== "none" ? (
+                        <button
+                          className="button secondary"
+                          disabled={Boolean(applyingSuggestionKey)}
+                          onClick={() => void handleApplyAgenticUpdate(item)}
+                          type="button"
+                        >
+                          {applyingSuggestionKey === `${item.action}-${item.target_slug}-${item.title}`
+                            ? "Applying..."
+                            : item.action === "update"
+                              ? "Update wiki page"
+                              : "Create wiki page"}
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+
+                {agenticApplyResult ? (
+                  <p className="notice success">
+                    Wiki page updated: <Link href={`/wiki/${agenticApplyResult.slug}`}>{agenticApplyResult.title}</Link>
+                  </p>
+                ) : null}
+                {agenticApplyError ? <p className="notice error">{agenticApplyError}</p> : null}
+
+                {result.agentic.wiki_pages.length > 0 ? (
+                  <div className="pill-row">
+                    {result.agentic.wiki_pages.map((page) => (
+                      <span className="pill" key={page.slug}>
+                        {page.title} · {page.score.toFixed(2)}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             <label className="field">
               <span>Wiki title</span>

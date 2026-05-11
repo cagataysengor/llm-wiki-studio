@@ -13,6 +13,7 @@ dist/
 build/
 .archive/
 backups/
+sample_sources/
 data/app.db
 data/metadata.db
 data/index/

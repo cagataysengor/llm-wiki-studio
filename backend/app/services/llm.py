@@ -22,7 +22,7 @@ def answer_with_provider(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             max_tokens=max_tokens,
-            prefer_completions=provider == "Local",
+            allow_completion_fallback=provider == "Local",
         )
     if provider == "Gemini":
         return _call_gemini_chat(
@@ -54,12 +54,12 @@ def _call_openai_style_chat(
     system_prompt: str,
     user_prompt: str,
     max_tokens: int,
-    prefer_completions: bool = False,
+    allow_completion_fallback: bool = False,
 ) -> str:
     headers: dict[str, str] = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
-    request_timeout = (10, 180) if prefer_completions else (10, 60)
+    request_timeout = (10, 180) if allow_completion_fallback else (10, 60)
 
     payload: dict[str, Any] = {
         "model": model_name,
@@ -72,16 +72,14 @@ def _call_openai_style_chat(
     }
 
     completion_url = _derive_completions_url(llm_url)
-    if not prefer_completions:
-        response = requests.post(llm_url, headers=headers, json=payload, timeout=request_timeout)
-        if response.ok:
-            data = response.json()
-            text = _extract_openai_style_text(data)
-            if text:
-                return text
+    response = requests.post(llm_url, headers=headers, json=payload, timeout=request_timeout)
+    if response.ok:
+        data = response.json()
+        text = _extract_openai_style_text(data, provider=provider)
+        if text:
+            return text
 
-    response: requests.Response | None = None
-    if completion_url and completion_url != llm_url:
+    if allow_completion_fallback and completion_url and completion_url != llm_url:
         fallback_payload = {
             "model": model_name,
             "prompt": _build_completion_prompt(system_prompt=system_prompt, user_prompt=user_prompt),
@@ -107,15 +105,12 @@ def _call_openai_style_chat(
         if completion_text:
             return completion_text
 
-    if response is not None:
-        _raise_for_status_with_body(response)
-        data = response.json()
-        text = _extract_openai_style_text(data, provider=provider)
-        if text:
-            return text
-        raise RuntimeError(f"OpenAI-style endpoint returned no text: {data}")
-
-    raise RuntimeError("OpenAI-style endpoint returned no usable response.")
+    _raise_for_status_with_body(response)
+    data = response.json()
+    text = _extract_openai_style_text(data, provider=provider)
+    if text:
+        return text
+    raise RuntimeError(f"OpenAI-style endpoint returned no text: {data}")
 
 
 def _call_gemini_chat(
